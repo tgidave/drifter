@@ -7,8 +7,6 @@
 #include <IridiumSBD.h>
 #include <TinyGPS++.h> // NMEA parsing: http://arduiniana.org
 #include <PString.h> // String buffer formatting: http://arduiniana.org
-//#include <Wire.h>
-//#include <Adafruit_TCS34725.h>
 
 #define BEACON_INTERVAL 21600 // Time between transmissions
 #define ROCKBLOCK_RX_PIN 3 // Pin marked RX on RockBlock
@@ -21,6 +19,8 @@
 #define GPS_POWER_PIN 9
 #define GPS_BAUD 9600
 #define CONSOLE_BAUD 115200
+
+#define OUT_BUFFER_SIZE 370
 
 SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN);
 SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN);
@@ -46,7 +46,7 @@ double course;
 
 int noFixFoundCount;
 
-char outBuffer[360]; // Always try to keep message short
+char outBuffer[OUT_BUFFER_SIZE]; // Always try to keep message short
 
 unsigned long loopStartTime;
 
@@ -208,9 +208,6 @@ int getGPSFix(void) {
   else {
     strcpy(outBuffer, "No GPS fix was found.\r\n");
   }
-#endif
-
-#ifdef SERIAL_DEBUG
   Serial.flush();
   Serial.print(outBuffer);
   Serial.flush();
@@ -244,7 +241,7 @@ int transmitGPSFix(int fixfnd) {
   if (isbd.begin() == ISBD_SUCCESS) {
     int len = strlen(outBuffer);
     PString str(outBuffer, sizeof(outBuffer) - len);
-    str.print("Ocean Voyager land test,");
+    str.print("Ocean Voyager,");
     str.print(latitude, 6);
     str.print(",");
     str.print(longitude, 6);
