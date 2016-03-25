@@ -1,11 +1,11 @@
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
   #define SERIAL_DEBUG_ROCKBLOCK
 #endif
 
-#define ALWAYS_TRANSMIT
+//#define ALWAYS_TRANSMIT
 //#define NEVER_TRANSMIT
 
 #include <avr/sleep.h>
@@ -55,11 +55,10 @@ int timeSecond;
 
 double latitude;
 double longitude;
-//unsigned long altitude;
 unsigned long speed;
 double course;
 
-unsigned long waveData[WAVE_COUNT];
+double waveData[WAVE_COUNT];
 
 int noFixFoundCount;
 
@@ -228,7 +227,7 @@ int getGPSFix(void) {
   int fixfnd = false;
   unsigned long now;
   char *ptr;
-  int noUpdateCount;
+  int notAvailableCount;
 
   loopStartTime = millis();
 
@@ -271,27 +270,31 @@ int getGPSFix(void) {
     timeSecond = tinygps.time.second();
     latitude = tinygps.location.lat();
     longitude = tinygps.location.lng();
-//    altitude = tinygps.altitude.meters();
     speed = tinygps.speed.knots();
     course = tinygps.course.value() / 100;
-    noUpdateCount = 0;
+    notAvailableCount = 0;
 
     for (i = 0; i < WAVE_COUNT; ) {
-      if (tinygps.altitude.isUpdated()) {
-        waveData[i] = tinygps.altitude.meters();
-        ++i;
-        noUpdateCount = 0;
-      } else {
-        ++noUpdateCount;
-        if (noUpdateCount >= 3) {
-          waveData[i] = 0;
-          noUpdateCount = 0;
+      if (ssGPS.available()) {
+        tinygps.encode(ssGPS.read());
+          waveData[i] = tinygps.altitude.meters();
           ++i;
+          notAvailableCount = 0;
+      } else {
+        ++notAvailableCount;
+        if (notAvailableCount >= 3) {
+          waveData[i] = 0;
+          notAvailableCount = 0;
+          ++i;
+#ifdef SERIAL_DEBUG_GPS
+          Serial.print("notAvailableCount = 3\r\n");
+          Serial.flush();
+#endif
         }
       }
         
 #ifdef SERIAL_DEBUG_GPS
-      sprintf(outBuffer, "i = %d %d\r\n", i, noUpdateCount);
+      sprintf(outBuffer, "i = %d %d\r\n", i, notAvailableCount);
       Serial.print(outBuffer);
       Serial.flush();
 #endif
@@ -299,7 +302,6 @@ int getGPSFix(void) {
     }
 
 #ifdef SERIAL_DEBUG_GPS
-//    int len = strlen(outBuffer);
     *outBuffer = 0;
     PString str(outBuffer, OUTBUFFER_SIZE);
     str.print("fix found! ");
@@ -307,8 +309,6 @@ int getGPSFix(void) {
     str.print(",");
     str.print(longitude, 6);
     str.print(",");
-//    str.print(altitude);
-//    str.print(",");
     str.print(speed, 1);
     str.print(",");
     str.print(course);
@@ -318,7 +318,7 @@ int getGPSFix(void) {
 
     str.begin();
 
-    for (i - 0; i < WAVE_COUNT - 1; ++i) {
+    for (i = 0; i < WAVE_COUNT - 1; ++i) {
       str.print(waveData[i]);
       str.print(", ");
     }
@@ -344,6 +344,7 @@ int getGPSFix(void) {
 
 int transmitGPSFix(int fixfnd) {
 
+  int i;
   char *ptr;
 
   // Setup the RockBLOCK
@@ -367,15 +368,26 @@ int transmitGPSFix(int fixfnd) {
     int len = strlen(outBuffer);
     PString str(outBuffer, sizeof(outBuffer) - len);
     str.print("OV test,");
-    str.print(latitude, 6);
-    str.print(",");
-    str.print(longitude, 6);
-    str.print(",");
-//    str.print(altitude);
-//    str.print(",");
-    str.print(speed, 1);
-    str.print(",");
-    str.print(course);
+    if (fixfnd) {
+      str.print(latitude, 6);
+      str.print(",");
+      str.print(longitude, 6);
+      str.print(",");
+      str.print(speed, 1);
+      str.print(",");
+      str.print(course);    
+      str.print(",");
+
+      for (i = 0; i < WAVE_COUNT - 1; ++i) {
+        str.print(waveData[i]);
+        str.print(", ");
+      }
+
+      str.print(waveData[i]);
+    } else {
+      str.print("fix not found");
+    }
+
 #ifdef SERIAL_DEBUG_ROCKBLOCK
     Serial.flush();
     Serial.print("Transmitting: ");
