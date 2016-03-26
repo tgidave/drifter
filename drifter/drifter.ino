@@ -8,6 +8,8 @@
 //#define ALWAYS_TRANSMIT
 //#define NEVER_TRANSMIT
 
+#define ALTITUDE_TEST
+
 #include <avr/sleep.h>
 #include <avr/wdt.h>
 #include <avr/power.h>
@@ -319,7 +321,11 @@ int getGPSFix(void) {
     str.begin();
 
     for (i = 0; i < WAVE_COUNT - 1; ++i) {
+#ifdef ALTITUDE_TEST  
+      str.print(waveData[i], 4) * 100;
+#else
       str.print(waveData[i]);
+#endif
       str.print(", ");
     }
 
@@ -379,7 +385,11 @@ int transmitGPSFix(int fixfnd) {
       str.print(",");
 
       for (i = 0; i < WAVE_COUNT - 1; ++i) {
-        str.print(waveData[i]);
+#ifdef ALTITUDE_TEST  
+      str.print(waveData[i], 4) * 100;
+#else
+      str.print(waveData[i]);
+#endif
         str.print(", ");
       }
 
