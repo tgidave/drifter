@@ -8,6 +8,8 @@
 //#define ALWAYS_TRANSMIT
 //#define NEVER_TRANSMIT
 
+//#define ALTITUDE_ARRAY
+
 #include <avr/sleep.h>
 #include <avr/wdt.h>
 #include <avr/power.h>
@@ -33,7 +35,9 @@
 #define GPS_BAUD 9600
 #define CONSOLE_BAUD 115200
 
-#define WAVE_COUNT  30
+#ifdef ALTITUDE_ARRAY
+  #define WAVE_COUNT  30
+#endif
 
 #define OUTBUFFER_SIZE  370
 
@@ -55,10 +59,17 @@ int timeSecond;
 
 double latitude;
 double longitude;
+
+#ifndef ALTITUDE_ARRAY
+unsigned long altitude;
+#endif
+
 unsigned long speed;
 double course;
 
+#ifdef ALTITUDE_ARRAY
 double waveData[WAVE_COUNT];
+#endif
 
 int noFixFoundCount;
 
@@ -144,15 +155,21 @@ void loop() {
   timeSecond = 0;
   latitude = 0;
   longitude = 0;
-//  altitude = 0;
+
+#ifndef ALTITUDE_ARRAY
+  altitude = 0;
+#endif
+
   speed = 0;
   course = 0;
   noFixFoundCount = 0; 
   *outBuffer = 0;
 
+#ifdef ALTITUDE_ARRAY
   for ( i = 0; i < WAVE_COUNT; ++i ) {
     waveData[i] = 0;
   }
+#endif
 
   fixFound = getGPSFix();
 
@@ -270,10 +287,16 @@ int getGPSFix(void) {
     timeSecond = tinygps.time.second();
     latitude = tinygps.location.lat();
     longitude = tinygps.location.lng();
+
+#ifndef ALTITUDE_ARRAY
+    altitude = tinygps.altitude.meters();
+#endif
+
     speed = tinygps.speed.knots();
     course = tinygps.course.value() / 100;
     notAvailableCount = 0;
 
+#ifdef ALTITUDE_ARRAY
     for (i = 0; i < WAVE_COUNT; ) {
       if (ssGPS.available()) {
         tinygps.encode(ssGPS.read());
@@ -286,20 +309,21 @@ int getGPSFix(void) {
           waveData[i] = 0;
           notAvailableCount = 0;
           ++i;
-#ifdef SERIAL_DEBUG_GPS
+  #ifdef SERIAL_DEBUG_GPS
           Serial.print("notAvailableCount = 3\r\n");
           Serial.flush();
-#endif
+  #endif
         }
       }
         
-#ifdef SERIAL_DEBUG_GPS
+  #ifdef SERIAL_DEBUG_GPS
       sprintf(outBuffer, "i = %d %d\r\n", i, notAvailableCount);
       Serial.print(outBuffer);
       Serial.flush();
-#endif
+  #endif
       delay(1000);
     }
+#endif
 
 #ifdef SERIAL_DEBUG_GPS
     *outBuffer = 0;
@@ -311,11 +335,17 @@ int getGPSFix(void) {
     str.print(",");
     str.print(speed, 1);
     str.print(",");
+
+  #ifndef ALTITUDE_ARRAY
+    str.print(altitude);
+    str.print(",");
+  #endif
     str.print(course);
     str.print("\r\n");
     Serial.flush();
     Serial.print(outBuffer);
 
+  #ifdef ALTITUDE_ARRAY
     str.begin();
 
     for (i = 0; i < WAVE_COUNT - 1; ++i) {
@@ -325,6 +355,7 @@ int getGPSFix(void) {
 
     str.print(waveData[i] * 100, 2);
     str.print("\r\n");
+  #endif
 #endif
   } 
 #ifdef SERIAL_DEBUG_GPS
@@ -373,17 +404,26 @@ int transmitGPSFix(int fixfnd) {
       str.print(",");
       str.print(longitude, 6);
       str.print(",");
+
+#ifndef ALTITUDE_ARRAY
+      str.print(altitude);
+      str.print(",");
+#endif
+
       str.print(speed, 1);
       str.print(",");
       str.print(course);    
-      str.print(",");
 
+#ifdef ALTITUDE_ARRAY
+      str.print(",");
       for (i = 0; i < WAVE_COUNT - 1; ++i) {
       str.print(waveData[i] * 100, 2);
         str.print(", ");
       }
 
       str.print(waveData[i] * 100, 2);
+#endif
+
     } else {
       str.print("fix not found");
     }
