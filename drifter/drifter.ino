@@ -1,14 +1,14 @@
-//#define SERIAL_DEBUG
+#define SERIAL_DEBUG
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
   #define SERIAL_DEBUG_ROCKBLOCK
 #endif
 
-//#define ALWAYS_TRANSMIT
+#define ALWAYS_TRANSMIT
 //#define NEVER_TRANSMIT
 
-//#define ALTITUDE_ARRAY
+#define ALTITUDE_ARRAY
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
@@ -39,7 +39,7 @@
   #define WAVE_COUNT  30
 #endif
 
-#define OUTBUFFER_SIZE  370
+#define OUTBUFFER_SIZE  340
 
 SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN);
 SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN);
@@ -349,11 +349,11 @@ int getGPSFix(void) {
     str.begin();
 
     for (i = 0; i < WAVE_COUNT - 1; ++i) {
-      str.print(waveData[i] * 100, 2);
+      str.print(waveData[i], 2);
       str.print(", ");
     }
 
-    str.print(waveData[i] * 100, 2);
+    str.print(waveData[i], 2);
     str.print("\r\n");
   #endif
 #endif
@@ -377,6 +377,7 @@ int transmitGPSFix(int fixfnd) {
 
   int i;
   char *ptr;
+  int msgLen;
 
   // Setup the RockBLOCK
 #ifdef SERIAL_DEBUG_ROCKBLOCK
@@ -417,11 +418,11 @@ int transmitGPSFix(int fixfnd) {
 #ifdef ALTITUDE_ARRAY
       str.print(",");
       for (i = 0; i < WAVE_COUNT - 1; ++i) {
-      str.print(waveData[i] * 100, 2);
+      str.print(waveData[i], 2);
         str.print(", ");
       }
 
-      str.print(waveData[i] * 100, 2);
+      str.print(waveData[i], 2);
 #endif
 
     } else {
@@ -434,7 +435,14 @@ int transmitGPSFix(int fixfnd) {
     Serial.println(outBuffer);
     Serial.flush();
 #endif
-    isbd.sendSBDText(outBuffer);
+    msgLen = strlen(outBuffer);
+
+    if (msgLen > (OUTBUFFER_SIZE - 1)) {
+      msgLen = 370;
+      outBuffer[OUTBUFFER_SIZE - 1] = 0;
+    }
+
+    isbd.sendSBDBinary((const uint8_t *)outBuffer, msgLen);
   }
 
   isbd.sleep();
