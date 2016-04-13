@@ -1,15 +1,13 @@
 
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
   #define SERIAL_DEBUG_ROCKBLOCK
 #endif
 
-#define ALWAYS_TRANSMIT
+//#define ALWAYS_TRANSMIT
 //#define NEVER_TRANSMIT
-
-#define ALTITUDE_ARRAY
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
