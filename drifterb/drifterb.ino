@@ -4,6 +4,7 @@
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
   #define SERIAL_DEBUG_ROCKBLOCK
+  #define SERIAL_DEBUG_TCS
 #endif
 
 //#define ALWAYS_TRANSMIT
@@ -22,21 +23,28 @@
   #include <PString.h> // String buffer formatting: http://arduiniana.org
 #endif
 
-//#include <Wire.h>
-//#include <Adafruit_TCS34725.h>
+#include <Wire.h>
+#include <Adafruit_TCS34725.h>
 
 #include "drifter.h"
 
-#define BEACON_INTERVAL 21600 // Time between transmissions
 #define ROCKBLOCK_RX_PIN 11 // Pin marked RX on RockBlock
 #define ROCKBLOCK_TX_PIN 13 // Pin marked TX on RockBlock
 #define ROCKBLOCK_SLEEP_PIN 18
 #define ROCKBLOCK_BAUD 19200
 #define ROCKBLOCK_POWER_PIN 15
+
 #define GPS_RX_PIN 12 //Pin marked TX on GPS board
 #define GPS_TX_PIN 10 //Pin marked RX on GPS board
 #define GPS_POWER_PIN 14
 #define GPS_BAUD 9600
+#define MAX_INVALID_ALTITUDE_RETRY_COUNT 3
+
+#define TCS_SDA_PIN 17
+#define TCS_SCI_PIN 16
+#define TCS_POWER_PIN 19
+#define TCS_BAUD 9600
+
 #define CONSOLE_BAUD 115200
 
 #ifdef SERIAL_DEBUG
@@ -47,9 +55,12 @@ SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN);
 SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN);
 IridiumSBD isbd(ssIridium, ROCKBLOCK_SLEEP_PIN);
 TinyGPSPlus tinygps;
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_1X);
 
+void gpsReadDelay(unsigned long ms);
 int getGPSFix(void);
 int transmitGPSFix(int fixfnd);
+int getTSCColorValues(void);
 
 drifterData dData;
 
@@ -113,10 +124,37 @@ ISR (WDT_vect)
 }
 
 void setup() {
+
+  int i;
+
   pinMode(GPS_POWER_PIN, OUTPUT);
-  pinMode(ROCKBLOCK_POWER_PIN, OUTPUT);
   digitalWrite(GPS_POWER_PIN, LOW);
+
+  pinMode(ROCKBLOCK_POWER_PIN, OUTPUT);
   digitalWrite(ROCKBLOCK_POWER_PIN, LOW);
+
+  pinMode(TCS_POWER_PIN, OUTPUT);
+  digitalWrite(TCS_POWER_PIN, LOW);
+
+  dData.ddYear = 0;
+  dData.ddMonth = 0;
+  dData.ddDay = 0;
+  dData.ddHour = 0;
+  dData.ddMinute = 0;
+  dData.ddSecond = 0;
+  dData.ddLatitude = 0;
+  dData.ddLongitude = 0;
+  dData.ddSpeed = 0;
+  dData.ddCourse = 0;
+  dData.ddRawRed = 0;
+  dData.ddRawGreen = 0;
+  dData.ddRawBlue = 0;
+  dData.ddRawClear = 0;
+  noFixFoundCount = 0; 
+
+  for ( i = 0; i < WAVE_COUNT; ++i ) {
+    dData.ddAltitude[i] = 0;
+  }
 
 #ifdef SERIAL_DEBUG
   // Start the serial ports
@@ -131,22 +169,6 @@ void loop() {
   int sleepSecs;
   int sleepMins;
 
-  dData.ddYear = 0;
-  dData.ddMonth = 0;
-  dData.ddDay = 0;
-  dData.ddHour = 0;
-  dData.ddMinute = 0;
-  dData.ddSecond = 0;
-  dData.ddLatitude = 0;
-  dData.ddLongitude = 0;
-  dData.ddSpeed = 0;
-  dData.ddCourse = 0;
-  noFixFoundCount = 0; 
-
-  for ( i = 0; i < WAVE_COUNT; ++i ) {
-    dData.ddAltitude[i] = 0;
-  }
-
   fixFound = getGPSFix();
 
   if (fixFound) {
@@ -155,12 +177,14 @@ void loop() {
     ++noFixFoundCount;
   }
 
-  #ifdef SERIAL_DEBUG
-  sprintf(outBuffer, "%d/%02d/%02d %02d:%02d:%02d\r\n",
+#ifdef SERIAL_DEBUG
+  sprintf(outBuffer, "Data received at: %d/%02d/%02d %02d:%02d:%02d\r\n",
           dData.ddYear, dData.ddMonth, dData.ddDay, dData.ddHour, dData.ddMinute, dData.ddSecond);
   Serial.print(outBuffer);
   Serial.flush();
 #endif
+
+  getTSCColorValues();
 
 #ifdef ALWAYS_TRANSMIT
   transmitGPSFix(fixFound);
@@ -214,13 +238,23 @@ void loop() {
 #endif
 }
 
+void gpsReadDelay(unsigned long ms)
+{
+  unsigned long start = millis();
+  do 
+  {
+    while (ssGPS.available())
+      tinygps.encode(ssGPS.read());
+  } while (millis() - start < ms);
+}
+
 int getGPSFix(void) {
 
   int i;
   int fixfnd = false;
   unsigned long now;
   char *ptr;
-  int notAvailableCount;
+  int notValidCount;
 
   loopStartTime = millis();
 
@@ -265,33 +299,32 @@ int getGPSFix(void) {
     dData.ddLongitude = tinygps.location.lng();
     dData.ddSpeed = tinygps.speed.knots();
     dData.ddCourse = tinygps.course.value() / 100;
-    notAvailableCount = 0;
+    notValidCount = 0;
 
     for (i = 0; i < WAVE_COUNT; ) {
-      if (ssGPS.available()) {
-        tinygps.encode(ssGPS.read());
-          dData.ddAltitude[i] = tinygps.altitude.meters();
-          ++i;
-          notAvailableCount = 0;
+      if (tinygps.altitude.isValid()) {
+        dData.ddAltitude[i] = tinygps.altitude.meters();
+        ++i;
+        notValidCount = 0;
       } else {
-        ++notAvailableCount;
-        if (notAvailableCount >= 3) {
+        ++notValidCount;
+        if (notValidCount >= MAX_INVALID_ALTITUDE_RETRY_COUNT) {
           dData.ddAltitude[i] = 0;
-          notAvailableCount = 0;
+          notValidCount = 0;
           ++i;
   #ifdef SERIAL_DEBUG_GPS
-          Serial.print("notAvailableCount = 3\r\n");
+          Serial.print("notValidCount = 3\r\n");
           Serial.flush();
   #endif
         }
       }
         
   #ifdef SERIAL_DEBUG_GPS
-      sprintf(outBuffer, "i = %d %d\r\n", i, notAvailableCount);
+      sprintf(outBuffer, "i = %d %d\r\n", i, notValidCount);
       Serial.print(outBuffer);
       Serial.flush();
   #endif
-      delay(1000);
+      gpsReadDelay(1000);
     }
 
 #ifdef SERIAL_DEBUG_GPS
@@ -335,6 +368,48 @@ int getGPSFix(void) {
   return (fixfnd);
 }
 
+int getTSCColorValues(void) {
+  boolean TCSFound;
+
+  digitalWrite(TCS_POWER_PIN, HIGH);
+  TCSFound = tcs.begin();
+
+  if(TCSFound){
+
+    delay(5);
+    tcs.getRawData(&dData.ddRawRed, &dData.ddRawGreen, &dData.ddRawBlue, &dData.ddRawClear);
+
+#ifdef SERIAL_DEBUG_TCS
+     PString str(outBuffer, OUTBUFFER_SIZE);
+     str.print("TCS Found sensor ");
+     str.print(dData.ddRawRed);
+     str.print(",");
+     str.print(dData.ddRawGreen);
+     str.print(",");
+     str.print(dData.ddRawBlue);
+     str.print(",");
+     str.print(dData.ddRawClear);
+     str.print("\r\n");
+     Serial.print(outBuffer);
+     Serial.flush();
+#endif
+
+  } else {
+
+#ifdef SERIAL_DEBUG_TCS
+    Serial.println("No TCS34725 found ... check your connections");
+    Serial.flush();
+#endif
+
+    dData.ddRawRed = dData.ddRawGreen = dData.ddRawBlue = dData.ddRawClear = 0xFFFF;
+  }
+
+//  tcs.disable();
+  tcs.clearInterrupt();
+  digitalWrite(TCS_POWER_PIN, LOW);
+  return(TCSFound);
+}
+
 int transmitGPSFix(int fixfnd) {
 
   int i;
@@ -364,11 +439,7 @@ int transmitGPSFix(int fixfnd) {
     Serial.println("Transmitting.");
     Serial.flush();
 #endif
-    if (fixfnd) {
-      isbd.sendSBDBinary((const uint8_t *)&dData, sizeof(dData));
-    } else {
-      isbd.sendSBDText("fix not found");
-    }
+    isbd.sendSBDBinary((const uint8_t *)&dData, sizeof(dData));
   }
 
   isbd.sleep();

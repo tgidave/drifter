@@ -14,6 +14,10 @@ typedef struct drifterData{
   float ddLongitude;
   uint32_t ddSpeed;
   float ddCourse;
+  uint16_t  ddRawRed;
+  uint16_t  ddRawGreen;
+  uint16_t  ddRawBlue;
+  uint16_t  ddRawClear;
   float ddAltitude[WAVE_COUNT];
 } drifterData;
 

@@ -45,6 +45,14 @@ int main(int argc, char **argv) {
   ptr += 8;
   dData.ddCourse = convertToFloat(ptr);
   ptr += 8;
+  dData.ddRawRed = convertToShort(ptr);
+  ptr += 4;  
+  dData.ddRawGreen = convertToShort(ptr);
+  ptr += 4;
+  dData.ddRawBlue = convertToShort(ptr);
+  ptr += 4;
+  dData.ddRawClear = convertToShort(ptr);
+  ptr += 4;
 
   for (i = 0; i < WAVE_COUNT; i++) {
     dData.ddAltitude[i] = convertToFloat(ptr);
@@ -62,6 +70,10 @@ int main(int argc, char **argv) {
   printf("Longitude = %f\r\n", dData.ddLongitude);
   printf("Speed = %d\r\n", dData.ddSpeed);
   printf("Course = %f\r\n", dData.ddCourse);
+  printf("Raw Red = %d\r\n", dData.ddRawRed);
+  printf("Raw Green = %d\r\n", dData.ddRawGreen);
+  printf("Raw Blue = %d\r\n", dData.ddRawBlue);
+  printf("Raw Clear = %d\r\n", dData.ddRawClear);
   printf("Altitudes = %f\r\n", dData.ddAltitude[0]);
   for (i = 1; i < WAVE_COUNT; i++) {
     printf("            %f\r\n", dData.ddAltitude[i]);
