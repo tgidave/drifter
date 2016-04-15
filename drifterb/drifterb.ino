@@ -1,5 +1,19 @@
+//*****************************************************************************
+//
+// drifterb.ino
+//
+// This is the code for the main processor of the drifter device.  This code
+// sleeps for an hour in low power mode and then wakes up and takes a GPS 
+// reading getting the date, time, location, speed, vector, and altitude.
+// The altitude may to sampled for a number of time to detect wave data.  The 
+// color of the sky may also be recorded.  This data is collected in the drifter
+// data structure.  At certain hours during the day the drifter data structure 
+// is transmitted back to the user using the Iridium system.  The system then 
+// goes back to sleep for an hour.  
+//
+//*****************************************************************************
 
-//#define SERIAL_DEBUG
+//#define SERIAL_DEBUG  // Turn on serial port debugging. Requires lots of memory!
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
@@ -7,8 +21,10 @@
   #define SERIAL_DEBUG_TCS
 #endif
 
-//#define ALWAYS_TRANSMIT
-//#define NEVER_TRANSMIT
+//#define ALWAYS_TRANSMIT // uncomment this line to transmit every hour.
+//#define NEVER_TRANSMIT  // uncomment this line to never transmit.
+
+#define TCS34725_ATTACHED  // If no TCS34725 is attached comment out this define.
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
@@ -19,14 +35,51 @@
 #include <IridiumSBD.h>
 #include <TinyGPS++.h> // NMEA parsing: http://arduiniana.org
 
+#include "drifter.h"
+
 #ifdef SERIAL_DEBUG
   #include <PString.h> // String buffer formatting: http://arduiniana.org
 #endif
 
-#include <Wire.h>
-#include <Adafruit_TCS34725.h>
+#ifdef TCS34725_ATTACHED
+  #include <Wire.h>
+  #include <Adafruit_TCS34725.h>
+#endif
 
-#include "drifter.h"
+//*****************************************************************************
+//
+// The TRANSMIT_HOUR_1 through TRANSMIT_HOUR_4 defines below are in UTC 24 hour
+// time.  They can be any value between 0 and 23.  Setting a define to 04 will 
+// transmit around 9:30 PM and 16 will transmit around 9:30 AM Pacific Daylight Time.  
+// These values can be set to transmit once, twice, three times, or four times per day.  
+// Setting the transmit times to the same value for any two, three, or four values
+// will cause those values to match at the same time and only one transmit to occur
+// for all matching values. 
+//
+// For example:
+//
+// #define TRANSMIT_HOUR_1 00
+// #define TRANSMIT_HOUR_2 06
+// #define TRANSMIT_HOUR_3 12
+// #define TRANSMIT_HOUR_4 18
+// 
+// Will transmit four time a day and:
+// 
+// #define TRANSMIT_HOUR_1 00
+// #define TRANSMIT_HOUR_2 00
+// #define TRANSMIT_HOUR_3 00
+// #define TRANSMIT_HOUR_4 00
+// 
+// Will transmit once a day. 
+// 
+// All transmits occur near the 30 minute mark.
+// 
+//*****************************************************************************
+ 
+#define TRANSMIT_HOUR_1 04
+#define TRANSMIT_HOUR_2 16
+#define TRANSMIT_HOUR_3 16
+#define TRANSMIT_HOUR_4 16
 
 #define ROCKBLOCK_RX_PIN 11 // Pin marked RX on RockBlock
 #define ROCKBLOCK_TX_PIN 13 // Pin marked TX on RockBlock
@@ -40,10 +93,12 @@
 #define GPS_BAUD 9600
 #define MAX_INVALID_ALTITUDE_RETRY_COUNT 3
 
-#define TCS_SDA_PIN 17
-#define TCS_SCI_PIN 16
-#define TCS_POWER_PIN 19
-#define TCS_BAUD 9600
+#ifdef TCS34725_ATTACHED
+  #define TCS_SDA_PIN 17
+  #define TCS_SCI_PIN 16
+  #define TCS_POWER_PIN 19
+  #define TCS_BAUD 9600
+#endif
 
 #define CONSOLE_BAUD 115200
 
@@ -55,19 +110,31 @@ SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN);
 SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN);
 IridiumSBD isbd(ssIridium, ROCKBLOCK_SLEEP_PIN);
 TinyGPSPlus tinygps;
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_1X);
+
+#ifdef TCS34725_ATTACHED
+  Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_1X);
+#endif
 
 void gpsReadDelay(unsigned long ms);
 int getGPSFix(void);
 int transmitGPSFix(int fixfnd);
-int getTSCColorValues(void);
+
+#ifdef TCS34725_ATTACHED
+  int getTSCColorValues(void);
+#endif
 
 drifterData dData;
 
 int noFixFoundCount;
 
 #ifdef SERIAL_DEBUG
-  char outBuffer[340]; // Always try to keep message short
+  int hourCount;
+  char outBuffer[OUTBUFFER_SIZE]; // Always try to keep message short
+
+  #define MAX_SPIN 4
+
+  char spin[MAX_SPIN]= {'|', '/', '-', '\\'};
+  int spinIndex;
 #endif
 
 unsigned long loopStartTime;
@@ -133,8 +200,10 @@ void setup() {
   pinMode(ROCKBLOCK_POWER_PIN, OUTPUT);
   digitalWrite(ROCKBLOCK_POWER_PIN, LOW);
 
+#ifdef TCS34725_ATTACHED
   pinMode(TCS_POWER_PIN, OUTPUT);
   digitalWrite(TCS_POWER_PIN, LOW);
+#endif
 
   dData.ddYear = 0;
   dData.ddMonth = 0;
@@ -157,6 +226,7 @@ void setup() {
   }
 
 #ifdef SERIAL_DEBUG
+  hourCount = 0;
   // Start the serial ports
   Serial.begin(CONSOLE_BAUD);
 #endif
@@ -184,13 +254,18 @@ void loop() {
   Serial.flush();
 #endif
 
+#ifdef TCS34725_ATTACHED
   getTSCColorValues();
+#endif
 
 #ifdef ALWAYS_TRANSMIT
   transmitGPSFix(fixFound);
 #else
   #ifndef NEVER_TRANSMIT
-  if ((tinygps.time.hour() == 0) || (tinygps.time.hour() == 12)) {
+  if ((tinygps.time.hour() == TRANSMIT_HOUR_1) || 
+      (tinygps.time.hour() == TRANSMIT_HOUR_2) ||
+      (tinygps.time.hour() == TRANSMIT_HOUR_3) || 
+      (tinygps.time.hour() == TRANSMIT_HOUR_4)) {
     transmitGPSFix(fixFound);
   }
   #endif
@@ -198,9 +273,11 @@ void loop() {
 
   // Sleep
 #ifdef SERIAL_DEBUG
-  Serial.print("sleep an hour\r\n");
+  sprintf(outBuffer, "sleep an hour %d\r\n", hourCount);
+  Serial.print(outBuffer);
   Serial.flush();
   Serial.end();
+  ++hourCount;
 #endif
   sleepSecs = 0;
 
@@ -214,17 +291,33 @@ void loop() {
     sleepMins = 60;
   }
 
+#ifdef SERIAL_DEBUG
+  spinIndex = 0;
+#endif
+
   do {
     powerDown();
 
     sleepSecs += 8;
 
+#ifdef SERIAL_DEBUG
+    Serial.begin(CONSOLE_BAUD);
+    Serial.write(spin[spinIndex]);
+    Serial.write('\r');
+    Serial.flush();
+    Serial.end();
+    if (++spinIndex >= MAX_SPIN) {
+      spinIndex = 0;
+    }
+#endif
+
     if (sleepSecs > 59) {
       --sleepMins;
 #ifdef SERIAL_DEBUG
-      sprintf(outBuffer, "%d mins\r\n", sleepMins);
+//      sprintf(outBuffer, "%d mins\r\n", sleepMins);
       Serial.begin(CONSOLE_BAUD);
-      Serial.print(outBuffer);
+      Serial.print(sleepMins);
+      Serial.print(" mins\r\n");
       Serial.flush();
       Serial.end();
 #endif
@@ -368,6 +461,7 @@ int getGPSFix(void) {
   return (fixfnd);
 }
 
+#ifdef TCS34725_ATTACHED
 int getTSCColorValues(void) {
   boolean TCSFound;
 
@@ -409,6 +503,7 @@ int getTSCColorValues(void) {
   digitalWrite(TCS_POWER_PIN, LOW);
   return(TCSFound);
 }
+#endif
 
 int transmitGPSFix(int fixfnd) {
 
