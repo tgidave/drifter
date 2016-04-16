@@ -13,7 +13,7 @@
 //
 //*****************************************************************************
 
-//#define SERIAL_DEBUG  // Turn on serial port debugging. Requires lots of memory!
+#define SERIAL_DEBUG  // Turn on serial port debugging. Requires lots of memory!
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
@@ -466,6 +466,7 @@ int getTSCColorValues(void) {
   boolean TCSFound;
 
   digitalWrite(TCS_POWER_PIN, HIGH);
+  delay(200);
   TCSFound = tcs.begin();
 
   if(TCSFound){
