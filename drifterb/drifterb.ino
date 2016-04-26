@@ -76,7 +76,7 @@
 // 
 //*****************************************************************************
  
-#define TRANSMIT_HOUR_1 04
+#define TRANSMIT_HOUR_1 04  
 #define TRANSMIT_HOUR_2 16
 #define TRANSMIT_HOUR_3 16
 #define TRANSMIT_HOUR_4 16
@@ -106,8 +106,8 @@
   #define OUTBUFFER_SIZE  340
 #endif
 
-SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN);
-SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN);
+SoftwareSerial ssIridium(ROCKBLOCK_RX_PIN, ROCKBLOCK_TX_PIN); 
+SoftwareSerial ssGPS(GPS_RX_PIN, GPS_TX_PIN); 
 IridiumSBD isbd(ssIridium, ROCKBLOCK_SLEEP_PIN);
 TinyGPSPlus tinygps;
 
@@ -123,9 +123,10 @@ int transmitGPSFix(int fixfnd);
   int getTSCColorValues(void);
 #endif
 
-drifterData dData;
+drifterData dData;  // Data structure for drifter data sent back home
+                    // This structure is defined in drifter.h
 
-int noFixFoundCount;
+int noFixFoundCount;  // Number of times in a row the no GPS fix was found.
 
 #ifdef SERIAL_DEBUG
   int hourCount;
@@ -139,6 +140,7 @@ int noFixFoundCount;
 
 unsigned long loopStartTime;
 
+// Enumeration used by the low power sleep routine.
 enum period_t
 {
 	SLEEP_15MS,
@@ -154,6 +156,7 @@ enum period_t
 	SLEEP_FOREVER
 };
 
+// Macro used by the low power sleep routine
 #define sleep_bod_disable() 										\
 do { 																\
   unsigned char tempreg; 													\
@@ -168,6 +171,13 @@ do { 																\
                          [not_bodse] "i" (~_BV(BODSE))); 			\
 } while (0)
 
+//*****************************************************************************
+//
+// Code lifted from the LowPower.ino library. Couldn't get it to work using 
+// the library because it is now written for the atmega644.  Seems to work
+// OK here.
+// 
+//*****************************************************************************
 void	powerDown(void)
 {
   ADCSRA &= ~(1 << ADEN);
@@ -184,11 +194,25 @@ void	powerDown(void)
   ADCSRA |= (1 << ADEN);
 }
 
+//*****************************************************************************
+//
+// Code lifted from the LowPower.ino library. Watchdog timer interrupt. 
+// 
+//*****************************************************************************
+
 ISR (WDT_vect)
 {
 	// WDIE & WDIF is cleared in hardware upon entering this ISR
 	wdt_disable();
 }
+
+//*****************************************************************************
+//
+// Initialization routine for the drifter code.  Just declairs the device 
+// power control pins and then sets them off.  Initializes the data structure
+// and then optionally sets up the debug code.
+// 
+//*****************************************************************************
 
 void setup() {
 
@@ -232,6 +256,16 @@ void setup() {
 #endif
 }
 
+//*****************************************************************************
+//
+// Main processing loop for the drifter code.  This routing gathers data from
+// the GPS and the RGB detector and then, if the time is right, transmits the
+// data home using the Iridium system.  The next wakeup time is detemined from
+// the time received from the GPS and the processor is put asleep until the 
+// next time it wakes up. 
+// 
+//*****************************************************************************
+
 void loop() {
 
   int i;
@@ -239,15 +273,16 @@ void loop() {
   int sleepSecs;
   int sleepMins;
 
-  fixFound = getGPSFix();
+  fixFound = getGPSFix(); // Call the GPS processing routine.
 
-  if (fixFound) {
-    noFixFoundCount = 0;
+  if (fixFound) {         // Keep track of how many times in a row the GPS does not 
+    noFixFoundCount = 0;  // get a fix.
   } else {
     ++noFixFoundCount;
   }
 
 #ifdef SERIAL_DEBUG
+// Print the time and date from the GPS on the debug console.
   sprintf(outBuffer, "Data received at: %d/%02d/%02d %02d:%02d:%02d\r\n",
           dData.ddYear, dData.ddMonth, dData.ddDay, dData.ddHour, dData.ddMinute, dData.ddSecond);
   Serial.print(outBuffer);
@@ -255,13 +290,14 @@ void loop() {
 #endif
 
 #ifdef TCS34725_ATTACHED
-  getTSCColorValues();
+  getTSCColorValues();  // Call the RGB sensor routine.
 #endif
 
 #ifdef ALWAYS_TRANSMIT
   transmitGPSFix(fixFound);
 #else
   #ifndef NEVER_TRANSMIT
+  // If the time is right, send the data back home using the Iritium system.
   if ((tinygps.time.hour() == TRANSMIT_HOUR_1) || 
       (tinygps.time.hour() == TRANSMIT_HOUR_2) ||
       (tinygps.time.hour() == TRANSMIT_HOUR_3) || 
@@ -281,7 +317,12 @@ void loop() {
 #endif
   sleepSecs = 0;
 
-  if (fixFound) {
+// Calculate the time this routine should wake up.  This routine tries to
+// calculate a time that is at the 30 minute mark of the next hour.  The 
+// 30 minute mark is used to hopefully get around the boundry issues which
+// could occur around the hour mark.
+ 
+  if (fixFound) { // If we got the time from the last GPS    
     sleepMins = 90 - dData.ddMinute;
 
     if (sleepMins >= 75) {
@@ -294,6 +335,13 @@ void loop() {
 #ifdef SERIAL_DEBUG
   spinIndex = 0;
 #endif
+
+// This routine puts the processor into low power mode.  The lowest low power
+// mode uses the watchdog timer to wake up approximately every 8 secords.
+// this happens, 8 is added to the second counter and the routine keeps track
+// of how many minutes are left until it's time to wake up.  At that point
+// the loop function returns.  The loop routine will be called again as
+// soon as the housekeeping is done.
 
   do {
     powerDown();
@@ -331,6 +379,18 @@ void loop() {
 #endif
 }
 
+//*****************************************************************************
+//
+// gpsReadDelay
+//
+// ** This function should only be called while the GPS device is powered up and
+// running. **
+//
+// This function delays execution processor execution while reading data from 
+// the GPS device.  This will keep the GPS hardware active while waiting.   
+//
+//*****************************************************************************
+
 void gpsReadDelay(unsigned long ms)
 {
   unsigned long start = millis();
@@ -340,6 +400,14 @@ void gpsReadDelay(unsigned long ms)
       tinygps.encode(ssGPS.read());
   } while (millis() - start < ms);
 }
+
+//*****************************************************************************
+//
+// getGPSFix
+//
+// This function get location data from the GPS hardware. 
+//
+//*****************************************************************************
 
 int getGPSFix(void) {
 
@@ -351,8 +419,9 @@ int getGPSFix(void) {
 
   loopStartTime = millis();
 
-  digitalWrite(GPS_POWER_PIN, HIGH);
-  ssGPS.begin(GPS_BAUD);
+  digitalWrite(GPS_POWER_PIN, HIGH);  // Power up the GPS.
+  ssGPS.begin(GPS_BAUD);  // Start up the serial port used to read from and write
+                          // to the GPS device.
 
   // Step 1: Reset TinyGPS++ and begin listening to the GPS
 #ifdef SERIAL_DEBUG_GPS
