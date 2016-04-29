@@ -48,16 +48,6 @@
         var lastLatitude;
         var lastLongitude;
 
-        var nausiccaDone = false;
-        var circeDone = false;
-        var calypsoDone = false;
-
-        var highLatitude;
-        var lowLatitude;
-
-        var highLongitude;
-        var lowLongitude;
-
         function initMap() {
             //Enabling new cartography and themes
             google.maps.visualRefresh = true;
@@ -79,7 +69,6 @@
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var djdata = JSON.parse(xmlhttp.responseText);
                     placePointers(djdata, "Nausicca", greencircle);
-                    nausiccaDone = true;
                     getCirceData();
                  }
             };
@@ -144,21 +133,6 @@
                lastLatitude = djdata.points[i].latitude;
                lastLongitude = djdata.points[i].longitude;
 
-               if ((djdata.points[i].latitude + 90.0) > highLatitude) {
-                   highLatitude = djdata.points[i].latitude + 90.0;
-               } else {
-                   if ((djdata.points[i].latitude + 90.0) < lowLatitude) {
-                       lowLatitude = djdata.points[i].latitude + 90.0;
-                   }
-               }
-
-               if ((djdata.points[i].longitude + 180.0) > highLongitude) {
-                   highLongitude = djdata.points[i].longitude + 180.0;
-               } else {
-                   if ((djdata.points[i].longitude + 180.0) < lowLongitude) {
-                       lowLongitude = djdata.points[i].longitude + 180.0;
-                   }
-               }
             }
         }
 
