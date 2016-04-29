@@ -42,13 +42,21 @@
            strokeWeight: 1
        };
 
-        //Defining data to become a json database
-//        var ddata = '{"points": [{"year": 2016, "month": 4, "day": 22, "hour": 0, "minute": 36, "second": 34, "latitude": 21.150425, "longitude": -158.021179, "speed": 0, "course": 0.000000, "rawRed": 52, "rawGreen": 45, "rawBlue": 48, "rawClear": 88, "Altitude": [144.899994,144.899994,144.899994,144.899994,144.899994,144.899994,145.000000,145.000000,145.000000,144.899994,145.199997,145.100006,145.100006,145.699997,146.000000,146.300003,30.100000,30.200001,30.100000,29.000000,28.700001,28.900000,28.500000,28.500000,28.900000,29.100000,29.200001,29.600000,29.299999,28.799999]},{"year": 2016, "month": 4, "day": 22, "hour": 6, "minute": 34, "second": 31, "latitude": 21.156725, "longitude": -158.047455, "speed": 0, "course": 0.000000, "rawRed": 0, "rawGreen": 0, "rawBlue": 0, "rawClear": 0, "Altitude": [18.700001,18.400000,18.400000,18.000000,17.799999,16.900000,16.799999,16.500000,17.000000,16.900000,17.400000,18.000000,18.200001,18.000000,17.700001,17.500000,17.400000,17.600000,17.700001,17.700001,17.400000,17.299999,17.400000,17.799999,18.299999,18.500000,18.799999,19.200001,19.299999,19.100000]},{"year": 2016, "month": 4, "day": 22, "hour": 12, "minute": 35, "second": 1, "latitude": 21.148529, "longitude": -158.043335, "speed": 0, "course": 0.000000, "rawRed": 0, "rawGreen": 0, "rawBlue": 0, "rawClear": 0, "Altitude": [5.100000,5.100000,5.300000,6.100000,7.400000,8.400000,8.200000,8.300000,8.300000,8.300000,8.500000,8.100000,8.000000,7.900000,7.400000,5.900000,5.400000,5.400000,5.700000,5.900000,5.900000,6.100000,5.800000,5.900000,6.100000,5.800000,5.400000,5.500000,5.600000,5.400000]},{"year": 2016, "month": 4, "day": 22, "hour": 18, "minute": 35, "second": 31, "latitude": 21.141138, "longitude": -158.081909, "speed": 0, "course": 0.000000, "rawRed": 33, "rawGreen": 27, "rawBlue": 30, "rawClear": 52, "Altitude": [12.300000,12.300000,12.300000,11.900000,11.700000,12.600000,12.800000,13.600000,13.200000,12.600000,11.600000,11.800000,13.000000,13.100000,12.700000,12.500000,12.700000,13.500000,13.900000,13.500000,13.400000,13.100000,13.000000,13.600000,13.600000,12.300000,11.800000,10.800000,10.200000,10.200000]},{"year": 2016, "month": 4, "day": 23, "hour": 0, "minute": 37, "second": 2, "latitude": 21.149019, "longitude": -158.140076, "speed": 0, "course": 0.000000, "rawRed": 55, "rawGreen": 47, "rawBlue": 50, "rawClear": 88, "Altitude": [28.299999,28.299999,28.100000,28.100000,28.600000,27.700001,26.900000,26.100000,25.799999,24.900000,24.799999,24.799999,24.700001,24.799999,24.700001,24.900000,24.700001,24.600000,24.900000,25.000000,24.700001,24.100000,23.500000,23.500000,23.400000,23.500000,23.600000,23.600000,23.600000,23.400000]},{"year": 2016, "month": 4, "day": 23, "hour": 6, "minute": 34, "second": 51, "latitude": 21.152752, "longitude": -158.178604, "speed": 0, "course": 0.000000, "rawRed": 0, "rawGreen": 0, "rawBlue": 0, "rawClear": 0, "Altitude": [-3.000000,-3.000000,-3.300000,-3.600000,-2.900000,12.200000,14.500000,16.000000,17.100000,17.700001,17.700001,17.100000,16.600000,16.600000,16.600000,16.400000,15.100000,14.900000,14.600000,14.200000,13.700000,13.700000,13.800000,13.800000,13.900000,13.600000,13.800000,14.200000,14.000000,13.400000]},{"year": 2016, "month": 4, "day": 23, "hour": 12, "minute": 35, "second": 1, "latitude": 21.158474, "longitude": -158.206177, "speed": 0, "course": 0.000000, "rawRed": 0, "rawGreen": 0, "rawBlue": 0, "rawClear": 0, "Altitude": [1.600000,1.600000,1.600000,1.100000,1.300000,1.600000,2.000000,2.500000,2.900000,2.700000,2.600000,2.600000,3.000000,3.500000,3.600000,3.500000,3.400000,3.700000,3.500000,3.400000,3.700000,4.300000,4.500000,4.700000,5.000000,5.600000,5.600000,5.500000,5.400000,5.500000]}]}';
         //Defining map as a global variable to access from other functions
         var map;
 
         var lastLatitude;
         var lastLongitude;
+
+        var nausiccaDone = false;
+        var circeDone = false;
+        var calypsoDone = false;
+
+        var highLatitude;
+        var lowLatitude;
+
+        var highLongitude;
+        var lowLongitude;
 
         function initMap() {
             //Enabling new cartography and themes
@@ -56,7 +64,7 @@
 
             //Setting starting options of map
             var mapOptions = {
-                center: new google.maps.LatLng(21.148529, -158.043335),
+                center: new google.maps.LatLng(21.148529, -158.500000),
                     zoom: 10,
                 mapTypeId: google.maps.MapTypeId.SATELLITE
             };
@@ -70,41 +78,54 @@
             xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var djdata = JSON.parse(xmlhttp.responseText);
-                    placenausiccaPointers(djdata);
-                }
-            };
-            xmlhttp.open("GET", "nausicca.json", false);
-            xmlhttp.send();
-
-            xmlhttp.onreadystatechange = function() {
-                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-                    var djdata = JSON.parse(xmlhttp.responseText);
-                    placecircePointers(djdata);
-                }
+                    placePointers(djdata, "Nausicca", greencircle);
+                    nausiccaDone = true;
+                    getCirceData();
+                 }
             };
 
-            xmlhttp.open("GET", "circe.json", false);
-            xmlhttp.send();
-
-            xmlhttp.onreadystatechange = function() {
-                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-                    var djdata = JSON.parse(xmlhttp.responseText);
-                    placecalypsoPointers(djdata);
-                }
-            };
-            xmlhttp.open("GET", "calypso.json", false);
+            xmlhttp.open("GET", "nausicca.json", true);
             xmlhttp.send();
         }
 
-        function placenausiccaPointers(djdata) {
+        function getCirceData() {
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var djdata = JSON.parse(xmlhttp.responseText);
+                    placePointers(djdata, "Circe", yellowcircle);
+                    getCalypsoData();
+                }
+            };
+
+            xmlhttp.open("GET", "circe.json", true);
+            xmlhttp.send();
+        }
+
+        function getCalypsoData() {
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var djdata = JSON.parse(xmlhttp.responseText);
+                    placePointers(djdata, "Calypso", redcircle);
+                    loadAllDone();
+                }
+            };
+            xmlhttp.open("GET", "calypso.json", true);
+            xmlhttp.send();
+        }
+
+        function loadAllDone() {
+
+        }
+
+        function placePointers(djdata, name, iconPointer) {
             for (i = 0; i < djdata.points.length; i++) {
-                var dt = new Date(djdata.points[i].year, djdata.points[i].month - 1, djdata.points[i].day, 
-                                  djdata.points[i].hour, djdata.points[i].minute, djdata.points[i].second); 
+                var dt = new Date(Date.UTC(djdata.points[i].year, djdata.points[i].month - 1, djdata.points[i].day, 
+                                  djdata.points[i].hour, djdata.points[i].minute, djdata.points[i].second)); 
                 var marker = new google.maps.Marker( {
                    position: {lat: djdata.points[i].latitude, lng: djdata.points[i].longitude },
                    map: map,
-                   icon: greencircle,
-                   title: "Nausicca\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
+                   icon: iconPointer,
+                   title: name + "\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
                })
 
                if (i != 0) {
@@ -122,64 +143,22 @@
 
                lastLatitude = djdata.points[i].latitude;
                lastLongitude = djdata.points[i].longitude;
-            }
-        }
 
-        function placecircePointers(djdata) {
-            for (i = 0; i < djdata.points.length; i++) {
-               var dt = new Date(djdata.points[i].year, djdata.points[i].month - 1, djdata.points[i].day, 
-                                 djdata.points[i].hour, djdata.points[i].minute, djdata.points[i].second); 
-               var marker = new google.maps.Marker( {
-                   position: {lat: djdata.points[i].latitude, lng: djdata.points[i].longitude },
-                   map: map,
-                   icon: yellowcircle,
-                   title: "Circe\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
-               })
-
-               if (i != 0) {
-                 var line = new google.maps.Polyline({
-                   path: [
-                     new google.maps.LatLng(djdata.points[i].latitude, djdata.points[i].longitude), 
-                     new google.maps.LatLng(lastLatitude, lastLongitude)
-                   ],
-                   strokeColor: "#FF0000",
-                   strokeOpacity: 1.0,
-                   strokeWeight: 2,
-                   map: map
-                 });
+               if ((djdata.points[i].latitude + 90.0) > highLatitude) {
+                   highLatitude = djdata.points[i].latitude + 90.0;
+               } else {
+                   if ((djdata.points[i].latitude + 90.0) < lowLatitude) {
+                       lowLatitude = djdata.points[i].latitude + 90.0;
+                   }
                }
 
-               lastLatitude = djdata.points[i].latitude;
-               lastLongitude = djdata.points[i].longitude;
-            }
-        }
-
-        function placecalypsoPointers(djdata) {
-            for (i = 0; i < djdata.points.length; i++) {
-               var dt = new Date(djdata.points[i].year, djdata.points[i].month - 1, djdata.points[i].day, 
-                                 djdata.points[i].hour, djdata.points[i].minute, djdata.points[i].second); 
-               var marker = new google.maps.Marker( {
-                   position: {lat: djdata.points[i].latitude, lng: djdata.points[i].longitude },
-                   map: map,
-                   icon: redcircle,
-                   title: "Calypso\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
-               })
-
-               if (i != 0) {
-                 var line = new google.maps.Polyline({
-                   path: [
-                     new google.maps.LatLng(djdata.points[i].latitude, djdata.points[i].longitude), 
-                     new google.maps.LatLng(lastLatitude, lastLongitude)
-                   ],
-                   strokeColor: "#FF0000",
-                   strokeOpacity: 1.0,
-                   strokeWeight: 2,
-                   map: map
-                 });
+               if ((djdata.points[i].longitude + 180.0) > highLongitude) {
+                   highLongitude = djdata.points[i].longitude + 180.0;
+               } else {
+                   if ((djdata.points[i].longitude + 180.0) < lowLongitude) {
+                       lowLongitude = djdata.points[i].longitude + 180.0;
+                   }
                }
-
-               lastLatitude = djdata.points[i].latitude;
-               lastLongitude = djdata.points[i].longitude;
             }
         }
 
