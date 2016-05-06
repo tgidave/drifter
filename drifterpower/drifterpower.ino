@@ -21,9 +21,9 @@
 
 #define DRIFTER_POWER_PIN 2
 
-#define DAYS_TO_SLEEP 3
+#define DAYS_TO_SLEEP 1UL
 
-#define SECONDS_PER_DAY 24*60*60
+#define SECONDS_PER_DAY (24UL*60UL*60UL)
 //#define SECONDS_PER_DAY 60 // for testing only!
 #define POWER_DOWN_WAIT_SECONDS 15
 
