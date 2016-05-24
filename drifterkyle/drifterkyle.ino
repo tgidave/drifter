@@ -8,14 +8,16 @@
 #include <TinyGPS++.h> // NMEA parsing: http://arduiniana.org
 #include <PString.h> // String buffer formatting: http://arduiniana.org
 
-// The TRANSMIT_HOUR_1 and TRANSMIT_HOUR_2 defines below are in UTC 24 hour
-// time.  04 will transmit around 9:30 PM and 16 will transmit around 9:30 AM
+// The TRANSMIT_HOUR_x defines below are in UTC 24 hour time.  04 will 
+// transmit around 9:30 PM and 16 will transmit around 9:30 AM
 // Pacific Daylight Time.  By setting the transmit times to the same value
 // only one transmission will happen per day.  All transmits happen near 
 // the 30 minute mark.
  
 #define TRANSMIT_HOUR_1 04
 #define TRANSMIT_HOUR_2 04
+#define TRANSMIT_HOUR_3 04
+#define TRANSMIT_HOUR_4 04
 
 #define ROCKBLOCK_RX_PIN 3 // Pin marked RX on RockBlock
 #define ROCKBLOCK_TX_PIN 5 // Pin marked TX on RockBlock
@@ -108,7 +110,10 @@ void loop() {
   transmitGPSFix(fixFound);
 #else
   #ifndef NEVER_TRANSMIT
-  if ((tinygps.time.hour() == TRANSMIT_HOUR_1) || (tinygps.time.hour() == TRANSMIT_HOUR_2)) {
+  if ((tinygps.time.hour() == TRANSMIT_HOUR_1) || 
+      (tinygps.time.hour() == TRANSMIT_HOUR_2) ||
+      (tinygps.time.hour() == TRANSMIT_HOUR_3) ||
+      (tinygps.time.hour() == TRANSMIT_HOUR_4)) {
     transmitGPSFix(fixFound);
   }
   #endif
