@@ -42,11 +42,26 @@
            strokeWeight: 1
        };
 
+       var bluecircle ={
+           path: google.maps.SymbolPath.CIRCLE,
+           fillColor: 'blue',
+           fillOpacity: 1.0,
+           scale: 4.5,
+           strokeColor: 'white',
+           strokeWeight: 1
+       };
+
         //Defining map as a global variable to access from other functions
         var map;
 
         var lastLatitude;
         var lastLongitude;
+
+        var highLatitude = -90.0;
+        var lowLatitude = 90.0;
+
+        var highLongitude = -180.0;
+        var lowLongitude = 180.0;
 
         function initMap() {
             //Enabling new cartography and themes
@@ -55,8 +70,8 @@
             //Setting starting options of map
             var mapOptions = {
                 center: new google.maps.LatLng(21.400000, -158.700000),
-                    zoom: 10,
-                mapTypeId: google.maps.MapTypeId.SATELLITE
+                    zoom: 9,
+                mapTypeId: google.maps.MapTypeId.HYBRID
             };
 
             //Getting map DOM element
@@ -103,7 +118,11 @@
         }
 
         function loadAllDone() {
-
+            var southWest = new google.maps.LatLng(lowLatitude, lowLongitude);
+            var northEast = new google.maps.LatLng(highLatitude, highLongitude);
+            var bounds = new google.maps.LatLngBounds(southWest, northEast);
+            map.panToBounds(bounds);
+            map.fitBounds(bounds);
         }
 
         function placePointers(djdata, name, iconPointer) {
@@ -133,6 +152,17 @@
                lastLatitude = djdata.points[i].latitude;
                lastLongitude = djdata.points[i].longitude;
 
+               if (djdata.points[i].latitude > highLatitude) {
+                   highLatitude = djdata.points[i].latitude;
+               } else if (djdata.points[i].latitude < lowLatitude) {
+                  lowLatitude = djdata.points[i].latitude;
+               }
+
+               if (djdata.points[i].longitude > highLongitude) {
+                   highLongitude = djdata.points[i].longitude;
+               } else if (djdata.points[i].longitude < lowLongitude) {
+                  lowLongitude = djdata.points[i].longitude;
+               }
             }
         }
 
@@ -141,7 +171,6 @@
 </script>
 </head>
 <body>
-Tracking Cy's drifters
 <div id="mapDiv">
 </div>
 </body>
