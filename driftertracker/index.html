@@ -15,44 +15,20 @@
 
        var xmlhttp = new XMLHttpRequest();
 //       var url = "data1.json";
-       var dots = {
-           reddot: {
-               name: "Calypso",
-                
-               icon: {
-                   path: google.maps.SymbolPath.CIRCLE,
-                   fillColor: 'red',
-                   fillOpacity: 1.0,
-                   scale: 4.5,
-                   strokeColor: 'white',
-                   strokeWeight: 1
-               }
+       var drifters = {
+           nausicaa: {
+               name: "Nausicaa",
+               drifterColor: "green",
            },
 
-           greendot: {
-               name: "Nausicca",
-
-               icon: {
-                   path: google.maps.SymbolPath.CIRCLE,
-                   fillColor: 'green',
-                   fillOpacity: 1.0,
-                   scale: 4.5,
-                   strokeColor: 'white',
-                   strokeWeight: 1
-               }
-           },
-
-           yellowdot: {
+           circe: {
                name: "Circe",
+               drifterColor: "yellow"
+           },
 
-               icon: {
-                   path: google.maps.SymbolPath.CIRCLE,
-                   fillColor: 'yellow',
-                   fillOpacity: 1.0,
-                   scale: 4.5,
-                   strokeColor: 'white',
-                   strokeWeight: 1
-               }
+           calypso: {
+               name: "Calypso",
+               drifterColor: "red",
            }
         };
 
@@ -88,7 +64,7 @@
             xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var djdata = JSON.parse(xmlhttp.responseText);
-                    placePointers(djdata, "greendot");
+                    placePointers(djdata, "nausicaa");
                     getCirceData();
                  }
             };
@@ -101,7 +77,7 @@
             xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var djdata = JSON.parse(xmlhttp.responseText);
-                    placePointers(djdata, "yellowdot");
+                    placePointers(djdata, "circe");
                     getCalypsoData();
                 }
             };
@@ -114,7 +90,7 @@
             xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var djdata = JSON.parse(xmlhttp.responseText);
-                    placePointers(djdata, "reddot");
+                    placePointers(djdata, "calypso");
                     loadAllDone();
                 }
             };
@@ -134,11 +110,8 @@
             // Build the legend.
             var legend = document.getElementById('legend');
 
-            for (var key in dots) {
+            for (var key in drifters) {
 
-                var type = dots[key];
-                var name = type.name;
-                var icon = type.icon;
                 var div = document.createElement('div');
                 var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
@@ -152,9 +125,9 @@
                 circle.setAttribute("cy", "0.2cm");
                 circle.setAttribute("rx", "0.2cm");
                 circle.setAttribute("ry", "0.2cm");
-                circle.setAttribute("style", "fill: " + icon.fillColor + "; stroke: black; stroke-width: 1");
+                circle.setAttribute("style", "fill: " + drifters[key].drifterColor + "; stroke: black; stroke-width: 1");
                 svg.appendChild(circle);
-                div.innerHTML = dots[key].name;
+                div.innerHTML = drifters[key].name;
                 legend.appendChild(svg);
                 legend.appendChild(div);
              }
@@ -162,18 +135,31 @@
             map.controls[google.maps.ControlPosition.RIGHT_TOP].push(legend);
         }
 
-        function placePointers(djdata, dotPointer) {
+        function placePointers(djdata, drifterPointer) {
+
+            var drifterIcon = {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: drifters[drifterPointer].drifterColor,
+                    fillOpacity: 1.0,
+                    scale: 4.5,
+                    strokeColor: 'white',
+                    strokeWeight: 1
+                }
+
             for (i = 0; i < djdata.points.length; i++) {
+
                 var dt = new Date(Date.UTC(djdata.points[i].year, djdata.points[i].month - 1, djdata.points[i].day, 
                                   djdata.points[i].hour, djdata.points[i].minute, djdata.points[i].second)); 
+
                 var marker = new google.maps.Marker( {
                    position: {lat: djdata.points[i].latitude, lng: djdata.points[i].longitude },
                    map: map,
-                   icon: dots[dotPointer].icon,
-                   title: dots[dotPointer].name + "\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
+                   icon: drifterIcon,
+                   title: drifters[drifterPointer].name + "\n" + dt.toUTCString() + "\nLat: " + djdata.points[i].latitude + " Lng: " + djdata.points[i].longitude
                })
 
                if (i != 0) {
+
                  var line = new google.maps.Polyline({
                    path: [
                      new google.maps.LatLng(djdata.points[i].latitude, djdata.points[i].longitude), 
