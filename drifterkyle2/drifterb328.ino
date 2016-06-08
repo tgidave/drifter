@@ -13,7 +13,7 @@
 //
 //*****************************************************************************
 
-#define SERIAL_DEBUG  // Turn on serial port debugging. Requires lots of memory!
+//#define SERIAL_DEBUG  // Turn on serial port debugging. Requires lots of memory!
 
 #ifdef SERIAL_DEBUG
   #define SERIAL_DEBUG_GPS
@@ -21,7 +21,7 @@
   #define SERIAL_DEBUG_TCS
 #endif
 
-#define ALWAYS_TRANSMIT // uncomment this line to transmit every hour.
+//#define ALWAYS_TRANSMIT // uncomment this line to transmit every hour.
 //#define NEVER_TRANSMIT  // uncomment this line to never transmit.
 
 //#define TCS34725_ATTACHED  // If no TCS34725 is attached comment out this define.
@@ -76,20 +76,20 @@
 // 
 //*****************************************************************************
  
-#define TRANSMIT_HOUR_1 05  // 9:30 PM PST 
-#define TRANSMIT_HOUR_2 13  // 5:30 AM PST
-#define TRANSMIT_HOUR_3 21  // 1:30 PM PST
-#define TRANSMIT_HOUR_4 21
+#define TRANSMIT_HOUR_1 00  
+#define TRANSMIT_HOUR_2 8
+#define TRANSMIT_HOUR_3 16
+#define TRANSMIT_HOUR_4 16
 
-#define ROCKBLOCK_RX_PIN 11 // Pin marked RX on RockBlock
-#define ROCKBLOCK_TX_PIN 13 // Pin marked TX on RockBlock
-#define ROCKBLOCK_SLEEP_PIN 18
+#define ROCKBLOCK_RX_PIN 3 // Pin marked RX on RockBlock
+#define ROCKBLOCK_TX_PIN 5 // Pin marked TX on RockBlock
+#define ROCKBLOCK_SLEEP_PIN 6
 #define ROCKBLOCK_BAUD 19200
-#define ROCKBLOCK_POWER_PIN 15
+#define ROCKBLOCK_POWER_PIN 8
 
-#define GPS_RX_PIN 12 //Pin marked TX on GPS board
-#define GPS_TX_PIN 10 //Pin marked RX on GPS board
-#define GPS_POWER_PIN 14
+#define GPS_RX_PIN 4 //Pin marked TX on GPS board
+#define GPS_TX_PIN 2 //Pin marked RX on GPS board
+#define GPS_POWER_PIN 9
 #define GPS_BAUD 9600
 #define MAX_INVALID_ALTITUDE_RETRY_COUNT 3
 
